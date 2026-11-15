@@ -1,0 +1,8 @@
+# 依存ライブラリの更新・脆弱性修正を検知するための設定。
+# 脆弱性アラートは GitHub の「Security > Dependabot alerts」で確認できる（リポジトリ設定で有効化が必要）。
+version: 2
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
