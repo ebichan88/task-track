@@ -19,9 +19,9 @@ final class DateSelector extends JPanel {
     DateSelector(Clock clock, Consumer<LocalDate> onChange) {
         super(new FlowLayout(FlowLayout.LEFT, 4, 0));
         spinner = Ui.dateSpinner(AppTime.today(clock));
-        JButton prev = new JButton("◀ 前日");
-        JButton next = new JButton("翌日 ▶");
-        JButton today = new JButton("今日");
+        JButton prev = Theme.button("◀ 前日");
+        JButton next = Theme.button("翌日 ▶");
+        JButton today = Theme.button("今日");
         prev.addActionListener(e -> Ui.setDate(spinner, getDate().minusDays(1)));
         next.addActionListener(e -> Ui.setDate(spinner, getDate().plusDays(1)));
         today.addActionListener(e -> Ui.setDate(spinner, AppTime.today(clock)));

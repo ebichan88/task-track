@@ -13,7 +13,6 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 
@@ -40,10 +39,11 @@ final class MasterPanel extends JPanel {
     MasterPanel(AppContext ctx, UiEvents events) {
         super(new BorderLayout());
         MasterService m = ctx.masters;
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("プロジェクト", new ItemPanel("プロジェクト", events, m::projects, m::createProject, m::updateProject));
-        tabs.addTab("カテゴリ", new ItemPanel("カテゴリ", events, m::categories, m::createCategory, m::updateCategory));
-        tabs.addTab("タグ", new TagPanel(m, events));
+        JPanel tabs = Theme.Nav.tabs()
+                .add("プロジェクト", new ItemPanel("プロジェクト", events, m::projects, m::createProject, m::updateProject))
+                .add("カテゴリ", new ItemPanel("カテゴリ", events, m::categories, m::createCategory, m::updateCategory))
+                .add("タグ", new TagPanel(m, events))
+                .panel();
         add(Ui.padded(tabs), BorderLayout.CENTER);
     }
 
@@ -55,8 +55,8 @@ final class MasterPanel extends JPanel {
         private final Creator creator;
         private final Updater updater;
         private final JTable table;
-        private final JButton editButton = new JButton("編集...");
-        private final JButton toggleButton = new JButton("有効／無効を切り替え");
+        private final JButton editButton = Theme.button("編集...");
+        private final JButton toggleButton = Theme.button("有効／無効を切り替え");
         private List<? extends MasterItem> rows = List.of();
 
         ItemPanel(String kind, UiEvents events, Supplier<? extends List<? extends MasterItem>> loader,
@@ -68,9 +68,8 @@ final class MasterPanel extends JPanel {
             this.creator = creator;
             this.updater = updater;
             this.table = Ui.table(kind + "名", "説明", "状態");
-            Ui.padded(this);
 
-            JButton addButton = new JButton("新規登録...");
+            JButton addButton = Theme.primaryButton("新規登録...");
             addButton.addActionListener(e -> edit(null));
             editButton.addActionListener(e -> edit(selected()));
             toggleButton.addActionListener(e -> toggle());
@@ -163,17 +162,16 @@ final class MasterPanel extends JPanel {
         private final MasterService masters;
         private final UiEvents events;
         private final JTable table = Ui.table("タグ名");
-        private final JButton renameButton = new JButton("名前を変更...");
-        private final JButton deleteButton = new JButton("削除");
+        private final JButton renameButton = Theme.button("名前を変更...");
+        private final JButton deleteButton = Theme.button("削除");
         private List<Tag> rows = List.of();
 
         TagPanel(MasterService masters, UiEvents events) {
             super(new BorderLayout(0, Ui.GAP));
             this.masters = masters;
             this.events = events;
-            Ui.padded(this);
 
-            JButton addButton = new JButton("新規登録...");
+            JButton addButton = Theme.primaryButton("新規登録...");
             addButton.addActionListener(e -> add());
             renameButton.addActionListener(e -> rename());
             deleteButton.addActionListener(e -> delete());

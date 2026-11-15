@@ -58,9 +58,9 @@ final class EntryDialog extends JDialog {
         center.add(Ui.form("開始日時 *", start, "終了日時 *", endPanel, "登録方法", new JLabel(method)),
                 BorderLayout.SOUTH);
 
-        JButton save = new JButton(editing == null ? "登録" : "保存");
-        JButton cancel = new JButton("キャンセル");
-        JButton delete = new JButton("削除");
+        JButton save = Theme.primaryButton(editing == null ? "登録" : "保存");
+        JButton cancel = Theme.button("キャンセル");
+        JButton delete = Theme.button("削除");
         save.addActionListener(e -> save());
         cancel.addActionListener(e -> dispose());
         delete.addActionListener(e -> delete());
@@ -75,10 +75,10 @@ final class EntryDialog extends JDialog {
         buttons.add(left, BorderLayout.WEST);
         buttons.add(right, BorderLayout.EAST);
 
-        JPanel content = Ui.padded(new JPanel(new BorderLayout(0, Ui.GAP)));
+        JPanel content = Ui.padded(Theme.gradientPanel(new BorderLayout(0, Ui.GAP)));
         content.add(center, BorderLayout.CENTER);
         content.add(buttons, BorderLayout.SOUTH);
-        setContentPane(content);
+        setContentPane(Theme.clear(content));
         getRootPane().setDefaultButton(save);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         pack();

@@ -33,12 +33,12 @@ final class BackupPanel extends JPanel {
         JTextField dbPath = new JTextField(ctx.backup.databaseFile().toString());
         dbPath.setEditable(false);
 
-        JButton backup = new JButton("バックアップを作成...");
+        JButton backup = Theme.button("バックアップを作成...");
         backup.addActionListener(e -> backup());
         JPanel backupBox = box("バックアップ", backup,
                 "現在のデータベースの内容を、指定したファイルへ保存します。アプリの利用中でも整合性の取れた状態で保存されます。");
 
-        JButton restore = new JButton("バックアップから復元...");
+        JButton restore = Theme.button("バックアップから復元...");
         restore.addActionListener(e -> restore());
         JPanel restoreBox = box("復元", restore,
                 "バックアップファイルの内容でデータベースを置き換えます。<b>現在のデータはすべて上書きされます。</b>");
@@ -52,13 +52,12 @@ final class BackupPanel extends JPanel {
 
     private static JPanel box(String title, JButton button, String html) {
         JPanel panel = new JPanel(new BorderLayout(0, Ui.GAP));
-        panel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createTitledBorder(title),
-                BorderFactory.createEmptyBorder(4, 8, 8, 8)));
+        panel.setBorder(BorderFactory.createEmptyBorder(8, 2, 8, 2));
         panel.add(new JLabel("<html>" + html + "</html>"), BorderLayout.CENTER);
         JPanel row = new JPanel(new BorderLayout());
         row.add(button, BorderLayout.WEST);
         panel.add(row, BorderLayout.SOUTH);
-        return panel;
+        return Theme.section(title, panel);
     }
 
     private JFileChooser chooser(String title) {

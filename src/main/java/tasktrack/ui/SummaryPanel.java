@@ -12,7 +12,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
-import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 
 import tasktrack.AppContext;
@@ -39,7 +38,7 @@ final class SummaryPanel extends JPanel {
         from = Ui.dateSpinner(monday);
         to = Ui.dateSpinner(monday.plusDays(6));
 
-        JButton run = new JButton("集計");
+        JButton run = Theme.primaryButton("集計");
         run.addActionListener(e -> reload(true));
         JPanel north = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         north.add(new JLabel("期間:"));
@@ -52,11 +51,12 @@ final class SummaryPanel extends JPanel {
         north.add(rangeButton("今月", 0, true));
         north.add(rangeButton("先月", -1, true));
 
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("日別", new JScrollPane(daily));
-        tabs.addTab("週別", new JScrollPane(weekly));
-        tabs.addTab("カテゴリ別", new JScrollPane(byCategory));
-        tabs.addTab("プロジェクト別", new JScrollPane(byProject));
+        JPanel tabs = Theme.Nav.tabs()
+                .add("日別", tablePage(daily))
+                .add("週別", tablePage(weekly))
+                .add("カテゴリ別", tablePage(byCategory))
+                .add("プロジェクト別", tablePage(byProject))
+                .panel();
 
         JPanel center = new JPanel(new BorderLayout(0, Ui.GAP));
         total.setFont(total.getFont().deriveFont(java.awt.Font.BOLD, 14f));
@@ -71,8 +71,14 @@ final class SummaryPanel extends JPanel {
         reload(false);
     }
 
+    private static JPanel tablePage(JTable table) {
+        JPanel page = new JPanel(new BorderLayout());
+        page.add(new JScrollPane(table), BorderLayout.CENTER);
+        return page;
+    }
+
     private JButton rangeButton(String label, int offset, boolean month) {
-        JButton button = new JButton(label);
+        JButton button = Theme.button(label);
         button.addActionListener(e -> {
             LocalDate today = AppTime.today(ctx.clock);
             LocalDate start;

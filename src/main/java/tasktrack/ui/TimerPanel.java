@@ -33,19 +33,19 @@ final class TimerPanel extends JPanel {
     private final JLabel project = Ui.plainLabel("");
     private final JLabel category = Ui.plainLabel("");
     private final JLabel startedAt = new JLabel();
-    private final JButton stopButton = new JButton("■ 停止");
-    private final JButton startButton = new JButton();
+    private final JButton stopButton = Theme.button("■ 停止");
+    private final JButton startButton = Theme.heroButton("");
 
     /** 表示用に保持している計測中の作業。経過時間はここから毎秒計算する（DB は読まない）。 */
     private TimeEntry current;
 
     TimerPanel(AppContext ctx, UiEvents events) {
-        super(new BorderLayout(0, Ui.GAP));
+        super(new BorderLayout(0, 12));
         this.ctx = ctx;
         this.events = events;
         this.form = new TaskForm(ctx.masters);
-        Ui.padded(this);
-        setPreferredSize(new Dimension(360, 100));
+        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 4));
+        setPreferredSize(new Dimension(372, 100));
 
         add(buildCurrentPanel(), BorderLayout.NORTH);
         add(buildStartPanel(), BorderLayout.CENTER);
@@ -80,23 +80,25 @@ final class TimerPanel extends JPanel {
             details.add(Box.createVerticalStrut(4));
         }
 
-        JPanel panel = new JPanel(new BorderLayout(0, Ui.GAP));
-        panel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createTitledBorder("計測中の作業"),
-                BorderFactory.createEmptyBorder(4, 8, 8, 8)));
-        panel.add(details, BorderLayout.CENTER);
-        panel.add(stopButton, BorderLayout.SOUTH);
-        return panel;
+        JPanel body = new JPanel(new BorderLayout(0, Ui.GAP));
+        body.setBorder(BorderFactory.createEmptyBorder(6, 2, 0, 2));
+        body.add(details, BorderLayout.CENTER);
+        body.add(stopButton, BorderLayout.SOUTH);
+        JPanel card = Theme.card(new BorderLayout());
+        card.add(Theme.section("計測中の作業", body), BorderLayout.CENTER);
+        return card;
     }
 
     private JPanel buildStartPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, Ui.GAP));
-        panel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createTitledBorder("作業を開始"),
-                BorderFactory.createEmptyBorder(4, 4, 8, 4)));
-        panel.add(form, BorderLayout.NORTH);
+        JPanel body = new JPanel(new BorderLayout(0, Ui.GAP));
+        body.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        body.add(form, BorderLayout.NORTH);
         JPanel south = new JPanel(new BorderLayout());
         south.add(startButton, BorderLayout.NORTH);
-        panel.add(south, BorderLayout.CENTER);
-        return panel;
+        body.add(south, BorderLayout.CENTER);
+        JPanel card = Theme.card(new BorderLayout());
+        card.add(Theme.section("作業を開始", body), BorderLayout.CENTER);
+        return card;
     }
 
     /** 入力欄に作業内容をセットする（履歴からの転記用）。 */
@@ -110,8 +112,8 @@ final class TimerPanel extends JPanel {
         current = running.orElse(null);
         if (current == null) {
             status.setText("計測していません");
-            status.setForeground(Color.GRAY);
-            elapsed.setForeground(Color.GRAY);
+            status.setForeground(Theme.MUTED_TEXT);
+            elapsed.setForeground(Theme.MUTED_TEXT);
             taskName.setText("―");
             project.setText("プロジェクト: ―");
             category.setText("カテゴリ: ―");

@@ -5,11 +5,11 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 import javax.swing.JFrame;
-import javax.swing.JTabbedPane;
+import javax.swing.JPanel;
 
 import tasktrack.AppContext;
 
-/** メイン画面。左にタイマー（常時表示）、右に各機能のタブを配置する。 */
+/** メイン画面。左端にサイドメニュー、その隣にタイマー（常時表示）、右に選択中の機能の画面を配置する。 */
 public final class MainFrame extends JFrame {
     private final AppContext ctx;
     private final UiEvents events = new UiEvents();
@@ -23,17 +23,24 @@ public final class MainFrame extends JFrame {
         this.onExit = onExit;
         this.reviewPanel = new ReviewPanel(ctx, events);
 
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("作業記録", new EntriesPanel(ctx, events));
-        tabs.addTab("集計", new SummaryPanel(ctx, events));
-        tabs.addTab("日次振り返り", reviewPanel);
-        tabs.addTab("マスタ管理", new MasterPanel(ctx, events));
-        tabs.addTab("データ出力", new ExportPanel(ctx));
-        tabs.addTab("バックアップ", new BackupPanel(ctx, this::afterRestore));
+        Theme.Nav menu = Theme.Nav.sideMenu("TaskTrack")
+                .add("作業記録", new EntriesPanel(ctx, events))
+                .add("集計", new SummaryPanel(ctx, events))
+                .add("日次振り返り", reviewPanel)
+                .add("マスタ管理", new MasterPanel(ctx, events))
+                .add("データ出力", new ExportPanel(ctx))
+                .add("バックアップ", new BackupPanel(ctx, this::afterRestore));
+
+        // グラデーション背景の上に、タイマーと選択中の画面を透過で載せる
+        JPanel main = Theme.gradientPanel(new BorderLayout());
+        main.add(new TimerPanel(ctx, events), BorderLayout.WEST);
+        main.add(menu.content(), BorderLayout.CENTER);
+        Theme.clear(main);
 
         setLayout(new BorderLayout());
-        add(new TimerPanel(ctx, events), BorderLayout.WEST);
-        add(tabs, BorderLayout.CENTER);
+        add(menu.bar(), BorderLayout.WEST);
+        add(main, BorderLayout.CENTER);
+        setIconImages(Theme.appIcons());
 
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
@@ -42,7 +49,7 @@ public final class MainFrame extends JFrame {
                 exit();
             }
         });
-        setSize(1240, 760);
+        setSize(1320, 760);
         setLocationRelativeTo(null);
     }
 
