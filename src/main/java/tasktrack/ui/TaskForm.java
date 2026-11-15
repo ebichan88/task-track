@@ -162,6 +162,8 @@ final class TaskForm extends JPanel {
     private static final class TagRenderer extends JCheckBox implements ListCellRenderer<Option> {
         TagRenderer() {
             Ui.noHtml(this);
+            Theme.styleToggle(this);
+            setOpaque(true); // リストの行として背景を塗る
         }
 
         @Override

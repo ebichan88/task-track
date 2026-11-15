@@ -55,6 +55,7 @@ final class Ui {
     /** 「ラベル, 部品, ラベル, 部品, ...」を縦に並べたフォームを作る。 */
     static JPanel form(Object... labelsAndComponents) {
         JPanel panel = new JPanel(new GridBagLayout());
+        panel.setOpaque(false);
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(3, 3, 3, 3);
         for (int i = 0; i < labelsAndComponents.length; i += 2) {
@@ -86,9 +87,18 @@ final class Ui {
             }
         };
         JTable table = new JTable(model);
-        table.setDefaultRenderer(Object.class, noHtml(new DefaultTableCellRenderer()));
+        table.setDefaultRenderer(Object.class, noHtml(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object value, boolean selected,
+                                                           boolean focused, int row, int column) {
+                super.getTableCellRendererComponent(t, value, selected, false, row, column);
+                setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6)); // 見出しと文字位置を揃える
+                return this;
+            }
+        }));
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setRowHeight(table.getRowHeight() + 6);
+        table.setRowHeight(table.getRowHeight() + 8);
+        Theme.styleTable(table);
         table.getTableHeader().setReorderingAllowed(false);
         return table;
     }

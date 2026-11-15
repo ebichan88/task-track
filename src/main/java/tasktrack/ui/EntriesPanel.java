@@ -26,9 +26,9 @@ final class EntriesPanel extends JPanel {
     private final DateSelector dateSelector;
     private final JTable table = Ui.table("作業名", "プロジェクト", "カテゴリ", "開始", "終了", "作業時間", "登録方法", "タグ");
     private final JLabel total = new JLabel();
-    private final JButton editButton = new JButton("編集...");
-    private final JButton deleteButton = new JButton("削除");
-    private final JButton resumeButton = new JButton("▶ この作業を再開");
+    private final JButton editButton = Theme.button("編集...");
+    private final JButton deleteButton = Theme.button("削除");
+    private final JButton resumeButton = Theme.button("▶ この作業を再開");
     private List<TimeEntry> rows = List.of();
 
     EntriesPanel(AppContext ctx, UiEvents events) {
@@ -38,7 +38,7 @@ final class EntriesPanel extends JPanel {
         Ui.padded(this);
         dateSelector = new DateSelector(ctx.clock, d -> reload());
 
-        JButton addButton = new JButton("手動登録...");
+        JButton addButton = Theme.primaryButton("手動登録...");
         addButton.addActionListener(e -> create());
         editButton.addActionListener(e -> edit());
         deleteButton.addActionListener(e -> delete());

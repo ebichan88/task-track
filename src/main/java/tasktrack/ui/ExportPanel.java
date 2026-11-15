@@ -64,7 +64,7 @@ final class ExportPanel extends JPanel {
         period.add(to);
         period.add(new JLabel("（開始日 0:00 から終了日 24:00 まで／日本時間）"));
 
-        JButton browse = new JButton("参照...");
+        JButton browse = Theme.button("参照...");
         browse.addActionListener(e -> browse());
         JPanel dirPanel = new JPanel(new BorderLayout(4, 0));
         dirPanel.add(directory, BorderLayout.CENTER);
@@ -77,22 +77,21 @@ final class ExportPanel extends JPanel {
         files.setRowSelectionAllowed(false);
         files.getColumnModel().getColumn(0).setPreferredWidth(160);
         files.getColumnModel().getColumn(1).setPreferredWidth(480);
-        JScrollPane fileScroll = new JScrollPane(files);
-        fileScroll.setBorder(BorderFactory.createTitledBorder("2. 出力対象ファイル（ZIP に格納されます）"));
+        JPanel filePage = new JPanel(new BorderLayout());
+        filePage.setBorder(BorderFactory.createEmptyBorder(6, 0, Ui.GAP, 0));
+        filePage.add(new JScrollPane(files), BorderLayout.CENTER);
+        JPanel fileBox = Theme.section("2. 出力対象ファイル（ZIP に格納されます）", filePage);
 
         JPanel north = new JPanel(new BorderLayout());
-        JPanel periodBox = new JPanel(new BorderLayout());
-        periodBox.setBorder(BorderFactory.createTitledBorder("1. 出力対象期間"));
-        periodBox.add(period, BorderLayout.CENTER);
-        north.add(periodBox, BorderLayout.CENTER);
+        period.setBorder(BorderFactory.createEmptyBorder(6, 0, Ui.GAP, 0));
+        north.add(Theme.section("1. 出力対象期間", period), BorderLayout.CENTER);
 
-        JButton export = new JButton("ZIP ファイルを出力");
+        JButton export = Theme.heroButton("ZIP ファイルを出力");
         export.addActionListener(e -> export());
         JPanel exportRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         exportRow.add(export);
 
-        JPanel dest = Ui.form("出力先フォルダ", dirPanel, "ファイル名", fileName);
-        dest.setBorder(BorderFactory.createTitledBorder("3. 出力先"));
+        JPanel dest = Theme.section("3. 出力先", Ui.form("出力先フォルダ", dirPanel, "ファイル名", fileName));
         JPanel south = new JPanel(new BorderLayout(0, Ui.GAP));
         south.add(dest, BorderLayout.NORTH);
         south.add(exportRow, BorderLayout.CENTER);
@@ -102,7 +101,7 @@ final class ExportPanel extends JPanel {
                 BorderLayout.SOUTH);
 
         add(north, BorderLayout.NORTH);
-        add(fileScroll, BorderLayout.CENTER);
+        add(fileBox, BorderLayout.CENTER);
         add(south, BorderLayout.SOUTH);
         updateFileName();
     }

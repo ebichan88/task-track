@@ -6,7 +6,6 @@ import java.awt.GridLayout;
 import java.time.LocalDate;
 import java.util.Optional;
 
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -47,7 +46,7 @@ final class ReviewPanel extends JPanel {
         fields.add(section("次のアクション（翌日以降に実施すること）", nextActions));
         fields.add(section("所感・気づき（感じたこと、改善点など）", reflections));
 
-        JButton save = new JButton("保存");
+        JButton save = Theme.primaryButton("保存");
         save.addActionListener(e -> {
             if (save()) {
                 state.setText(state.getText() + "  ✔ 保存しました");
@@ -81,9 +80,8 @@ final class ReviewPanel extends JPanel {
 
     private static JPanel section(String title, JTextArea area) {
         JPanel p = new JPanel(new BorderLayout());
-        p.setBorder(BorderFactory.createTitledBorder(title));
         p.add(new JScrollPane(area), BorderLayout.CENTER);
-        return p;
+        return Theme.section(title, p);
     }
 
     private ReviewInput input() {

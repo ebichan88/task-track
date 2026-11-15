@@ -56,7 +56,7 @@ final class RecoveryDialog extends JDialog {
         options.add(manualRow);
         options.add(discard);
 
-        JButton ok = new JButton("決定");
+        JButton ok = Theme.primaryButton("決定");
         ok.addActionListener(e -> {
             boolean done = Ui.run(this, () -> {
                 if (now.isSelected()) {
@@ -80,12 +80,12 @@ final class RecoveryDialog extends JDialog {
         center.add(info, BorderLayout.NORTH);
         center.add(options, BorderLayout.CENTER);
 
-        JPanel content = Ui.padded(new JPanel(new BorderLayout(0, Ui.GAP)));
+        JPanel content = Ui.padded(Theme.gradientPanel(new BorderLayout(0, Ui.GAP)));
         content.add(new JLabel("<html>前回、終了日時が保存されないまま終了した作業記録が見つかりました。<br>"
                 + "この記録の扱いを選んでください。</html>"), BorderLayout.NORTH);
         content.add(center, BorderLayout.CENTER);
         content.add(buttons, BorderLayout.SOUTH);
-        setContentPane(content);
+        setContentPane(Theme.clear(content));
         getRootPane().setDefaultButton(ok);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         pack();
