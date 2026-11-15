@@ -130,7 +130,7 @@ final class MasterPanel extends JPanel {
             JTextField description = new JTextField(item == null ? "" : item.description(), 28);
             JCheckBox active = new JCheckBox("有効", item == null || item.active());
             active.setEnabled(item != null);
-            JPanel form = Ui.form(kind + "名 *", name, "説明", description, "状態", active);
+            JPanel form = Theme.clear(Ui.form(kind + "名 *", name, "説明", description, "状態", active));
             String title = kind + (item == null ? "の新規登録" : "の編集");
             while (JOptionPane.showConfirmDialog(this, form, title, JOptionPane.OK_CANCEL_OPTION,
                     JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {

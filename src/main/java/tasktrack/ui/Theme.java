@@ -1,5 +1,6 @@
 package tasktrack.ui;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -16,9 +17,15 @@ import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.KeyboardFocusManager;
 import java.awt.LayoutManager;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.geom.Line2D;
+import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,19 +34,29 @@ import java.util.Map;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
+import javax.swing.ButtonModel;
+import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.JToggleButton;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.AbstractBorder;
 import javax.swing.plaf.basic.BasicButtonUI;
+import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicComboPopup;
+import javax.swing.plaf.basic.BasicSpinnerUI;
 import javax.swing.plaf.basic.BasicToggleButtonUI;
+import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.table.DefaultTableCellRenderer;
 
 /**
@@ -62,6 +79,8 @@ final class Theme {
     /** 表の見出し・枠などに使う淡い色 */
     static final Color SOFT = new Color(255, 228, 225);
     static final Color SOFT_LINE = new Color(240, 200, 205);
+    /** 入力欄の枠線 */
+    static final Color FIELD_LINE = new Color(226, 170, 176);
     static final Color TABLE_SELECTION = new Color(255, 214, 220);
     /** 淡い背景の上の補足文字 */
     static final Color MUTED_TEXT = new Color(130, 110, 114);
@@ -256,7 +275,7 @@ final class Theme {
     }
 
     /**
-     * グラデーション背景が見えるよう、配下のパネル・チェックボックス類を透過にし、表や入力欄の枠を整える。
+     * グラデーション背景が見えるよう配下のパネルを透過にし、入力部品（チェックボックス・選択欄・日付欄など）と表の枠をテーマの見た目にする。
      * スクロール領域の中（表・リスト・テキスト）は白地のまま残す。
      */
     static <T extends Container> T clear(T root) {
@@ -264,12 +283,253 @@ final class Theme {
             if (c instanceof JScrollPane scroll) {
                 scroll.setBorder(BorderFactory.createLineBorder(SOFT_LINE));
                 scroll.getViewport().setBackground(Color.WHITE);
-            } else if (c instanceof JPanel || c instanceof JCheckBox || c instanceof JRadioButton) {
-                ((JComponent) c).setOpaque(false);
-                clear((Container) c);
+            } else if (c instanceof JComboBox<?> combo) {
+                styleCombo(combo);
+            } else if (c instanceof JSpinner spinner) {
+                styleSpinner(spinner);
+            } else if (c instanceof JTextField field) {
+                styleField(field);
+            } else if (c instanceof JCheckBox || c instanceof JRadioButton) {
+                styleToggle((JToggleButton) c);
+            } else if (c instanceof JPanel panel) {
+                panel.setOpaque(false);
+                clear(panel);
             }
         }
         return root;
+    }
+
+    // --- 入力部品 ----------------------------------------------------------------
+
+    /** チェックボックス・ラジオボタンの印をテーマのものに差し替え、背景を透過にする。 */
+    static void styleToggle(JToggleButton b) {
+        Icon icon = b instanceof JRadioButton ? new MarkIcon(true) : new MarkIcon(false);
+        b.setIcon(icon);
+        b.setSelectedIcon(icon);
+        b.setPressedIcon(icon);
+        b.setRolloverIcon(icon);
+        b.setRolloverSelectedIcon(icon);
+        b.setDisabledIcon(icon);
+        b.setDisabledSelectedIcon(icon);
+        b.setRolloverEnabled(true);
+        b.setIconTextGap(6);
+        b.setOpaque(false);
+    }
+
+    private static void styleField(JTextField field) {
+        field.setBorder(new FieldBorder(4, 6, 4, 6));
+        repaintOnFocus(field);
+    }
+
+    private static void styleCombo(JComboBox<?> combo) {
+        combo.setUI(new ComboUi());
+        combo.setBackground(Color.WHITE);
+        combo.setOpaque(true);
+        combo.setBorder(new FieldBorder(2, 3, 2, 2));
+    }
+
+    private static void styleSpinner(JSpinner spinner) {
+        spinner.setUI(new SpinnerUi());
+        spinner.setBackground(Color.WHITE);
+        spinner.setOpaque(true);
+        spinner.setBorder(new FieldBorder(1, 1, 1, 1));
+        if (spinner.getEditor() instanceof JSpinner.DefaultEditor editor) {
+            JTextField text = editor.getTextField();
+            text.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
+            text.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    spinner.repaint();
+                }
+
+                @Override
+                public void focusLost(FocusEvent e) {
+                    spinner.repaint();
+                }
+            });
+        }
+    }
+
+    private static void repaintOnFocus(JComponent c) {
+        c.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                c.repaint();
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                c.repaint();
+            }
+        });
+    }
+
+    /** チェックボックス（角丸の四角にチェック）とラジオボタン（丸に点）の印。状態はボタンから読み取って描き分ける。 */
+    private static final class MarkIcon implements Icon {
+        private static final int SIZE = 16;
+        private final boolean round;
+
+        MarkIcon(boolean round) {
+            this.round = round;
+        }
+
+        @Override
+        public int getIconWidth() {
+            return SIZE;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return SIZE;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            ButtonModel model = ((AbstractButton) c).getModel();
+            boolean enabled = model.isEnabled();
+            boolean selected = model.isSelected();
+            Graphics2D g2 = smooth(g);
+            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+            g2.translate(x, y);
+            int arc = round ? SIZE : 6;
+            Color accent = enabled ? PRIMARY : new Color(240, 204, 206);
+            boolean filled = selected && !round;
+            g2.setColor(filled ? accent : enabled ? Color.WHITE : new Color(252, 246, 247));
+            g2.fillRoundRect(0, 0, SIZE - 1, SIZE - 1, arc, arc);
+            g2.setColor(selected ? accent : !enabled ? new Color(232, 212, 215)
+                    : model.isRollover() ? ACCENT : FIELD_LINE);
+            g2.setStroke(new BasicStroke(model.isPressed() && model.isArmed() ? 2f : 1.2f));
+            g2.drawRoundRect(0, 0, SIZE - 1, SIZE - 1, arc, arc);
+            if (selected && round) {
+                g2.setColor(accent);
+                g2.fillOval(4, 4, SIZE - 8, SIZE - 8);
+            } else if (selected) {
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                Path2D check = new Path2D.Float();
+                check.moveTo(3.8, 8.0);
+                check.lineTo(6.6, 10.8);
+                check.lineTo(11.4, 4.8);
+                g2.draw(check);
+            }
+            g2.dispose();
+        }
+    }
+
+    /** 入力欄の枠線。フォーカスがある間は強調色にする。 */
+    private static final class FieldBorder extends AbstractBorder {
+        private final Insets padding;
+
+        FieldBorder(int top, int left, int bottom, int right) {
+            this.padding = new Insets(top + 1, left + 1, bottom + 1, right + 1);
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c, Insets insets) {
+            insets.set(padding.top, padding.left, padding.bottom, padding.right);
+            return insets;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Component focus = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+            boolean focused = focus != null && c.isEnabled() && (focus == c || SwingUtilities.isDescendingFrom(focus, c));
+            g.setColor(focused ? ACCENT : c.isEnabled() ? FIELD_LINE : new Color(232, 212, 215));
+            g.drawRect(x, y, width - 1, height - 1);
+        }
+    }
+
+    /** 選択欄・日付欄の矢印ボタン。 */
+    private static final class ArrowButton extends JButton {
+        private final boolean up;
+
+        ArrowButton(boolean up) {
+            this.up = up;
+            plain(this);
+            setFocusable(false);
+            setBorder(BorderFactory.createEmptyBorder());
+            setPreferredSize(new Dimension(20, 10));
+        }
+
+        @Override
+        public void updateUI() {
+            setUI(new BasicButtonUI());
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = smooth(g);
+            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+            boolean pressed = getModel().isArmed() && getModel().isPressed();
+            if (isEnabled() && (pressed || getModel().isRollover())) {
+                // 外周1pxは塗らない（日付欄では矢印が枠線の上に重なるため）
+                g2.setColor(pressed ? TABLE_SELECTION : SOFT);
+                g2.fillRect(1, 1, getWidth() - 2, getHeight() - 2);
+            }
+            float cx = getWidth() / 2f;
+            float cy = getHeight() / 2f;
+            float half = Math.min(4f, getHeight() / 2f - 2.5f);
+            float rise = (up ? -1 : 1) * half * 0.55f;
+            Path2D arrow = new Path2D.Float();
+            arrow.moveTo(cx - half, cy - rise);
+            arrow.lineTo(cx, cy + rise);
+            arrow.lineTo(cx + half, cy - rise);
+            g2.setColor(isEnabled() ? ACCENT_DARK : new Color(220, 196, 200));
+            g2.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.draw(arrow);
+            g2.dispose();
+        }
+    }
+
+    private static final class ComboUi extends BasicComboBoxUI {
+        @Override
+        protected JButton createArrowButton() {
+            return new ArrowButton(false);
+        }
+
+        @Override
+        protected ComboPopup createPopup() {
+            BasicComboPopup popup = new BasicComboPopup(comboBox);
+            popup.setBorder(BorderFactory.createLineBorder(ACCENT));
+            popup.getList().setSelectionBackground(TABLE_SELECTION);
+            popup.getList().setSelectionForeground(Color.BLACK);
+            popup.getList().setBackground(Color.WHITE);
+            return popup;
+        }
+
+        @Override
+        public void paintCurrentValueBackground(Graphics g, Rectangle bounds, boolean hasFocus) {
+            g.setColor(comboBox.isEnabled() ? Color.WHITE : new Color(252, 246, 247));
+            g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+        }
+
+        /** 選択中の値。フォーカス時も反転表示にせず、枠線の色だけで示す。 */
+        @Override
+        public void paintCurrentValue(Graphics g, Rectangle bounds, boolean hasFocus) {
+            Component c = comboBox.getRenderer().getListCellRendererComponent(listBox, comboBox.getSelectedItem(),
+                    -1, false, false);
+            c.setFont(comboBox.getFont());
+            c.setBackground(comboBox.isEnabled() ? Color.WHITE : new Color(252, 246, 247));
+            c.setForeground(comboBox.isEnabled() ? comboBox.getForeground() : MUTED_TEXT);
+            currentValuePane.paintComponent(g, c, comboBox, bounds.x + 2, bounds.y, bounds.width - 2, bounds.height,
+                    c instanceof JPanel);
+        }
+    }
+
+    private static final class SpinnerUi extends BasicSpinnerUI {
+        @Override
+        protected Component createNextButton() {
+            JButton button = new ArrowButton(true);
+            installNextButtonListeners(button);
+            return button;
+        }
+
+        @Override
+        protected Component createPreviousButton() {
+            JButton button = new ArrowButton(false);
+            installPreviousButtonListeners(button);
+            return button;
+        }
     }
 
     // --- 表 ----------------------------------------------------------------------
@@ -469,10 +729,9 @@ final class Theme {
             g2.setColor(ACCENT);
             g2.fillOval(0, 0, size - 1, size - 1);
             g2.setColor(Color.WHITE);
-            g2.setStroke(new java.awt.BasicStroke(1.6f * s, java.awt.BasicStroke.CAP_ROUND,
-                    java.awt.BasicStroke.JOIN_ROUND));
-            g2.draw(new java.awt.geom.Line2D.Float(8 * s, 8 * s, 8 * s, 3.6f * s));
-            g2.draw(new java.awt.geom.Line2D.Float(8 * s, 8 * s, 11 * s, 9.6f * s));
+            g2.setStroke(new BasicStroke(1.6f * s, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.draw(new Line2D.Float(8 * s, 8 * s, 8 * s, 3.6f * s));
+            g2.draw(new Line2D.Float(8 * s, 8 * s, 11 * s, 9.6f * s));
             g2.dispose();
             icons.add(image);
         }
