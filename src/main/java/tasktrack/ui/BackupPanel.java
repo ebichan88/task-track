@@ -81,7 +81,7 @@ final class BackupPanel extends JPanel {
         }
         if (Ui.run(this, () -> ctx.backup.backup(target.toPath()))) {
             ctx.appState.put(LAST_DIR_KEY, target.getParent());
-            JOptionPane.showMessageDialog(this, "バックアップを作成しました。\n" + target, "バックアップ",
+            JOptionPane.showMessageDialog(this, Ui.message("バックアップを作成しました。\n" + target), "バックアップ",
                     JOptionPane.INFORMATION_MESSAGE);
         }
     }
@@ -96,13 +96,13 @@ final class BackupPanel extends JPanel {
                 + "すべてバックアップの内容で上書きされます。この操作は元に戻せません。\n\n"
                 + "復元元: " + source + "\n\n復元を実行しますか？";
         Object[] options = {"上書きして復元する", "キャンセル"};
-        if (JOptionPane.showOptionDialog(this, warning, "復元の確認", JOptionPane.DEFAULT_OPTION,
+        if (JOptionPane.showOptionDialog(this, Ui.message(warning), "復元の確認", JOptionPane.DEFAULT_OPTION,
                 JOptionPane.WARNING_MESSAGE, null, options, options[1]) != 0) {
             return;
         }
         if (Ui.run(this, () -> ctx.backup.restore(source.toPath()))) {
-            JOptionPane.showMessageDialog(this, "復元しました。\n（復元直前のデータは次のファイルに退避されています）\n"
-                    + ctx.backup.preRestoreFile(), "復元", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, Ui.message("復元しました。\n（復元直前のデータは次のファイルに退避されています）\n"
+                    + ctx.backup.preRestoreFile()), "復元", JOptionPane.INFORMATION_MESSAGE);
         }
         // 失敗時も DB 接続は張り直されているため、常に画面を読み直す
         afterRestore.run();

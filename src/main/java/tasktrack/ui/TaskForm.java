@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.JCheckBox;
@@ -49,6 +50,8 @@ final class TaskForm extends JPanel {
     TaskForm(MasterService masters) {
         this.masters = masters;
         setLayout(new java.awt.BorderLayout());
+        project.setRenderer(Ui.noHtml(new DefaultListCellRenderer()));
+        category.setRenderer(Ui.noHtml(new DefaultListCellRenderer()));
 
         description.setLineWrap(true);
         description.setWrapStyleWord(true);
@@ -157,6 +160,10 @@ final class TaskForm extends JPanel {
     }
 
     private static final class TagRenderer extends JCheckBox implements ListCellRenderer<Option> {
+        TagRenderer() {
+            Ui.noHtml(this);
+        }
+
         @Override
         public Component getListCellRendererComponent(JList<? extends Option> list, Option value, int index,
                                                       boolean isSelected, boolean cellHasFocus) {

@@ -141,7 +141,7 @@ final class ExportPanel extends JPanel {
             }
             ctx.export.export(fromDate, toDate, target.toPath());
             ctx.appState.put(LAST_DIR_KEY, dirText);
-            JOptionPane.showMessageDialog(this, "出力しました。\n" + target, "データ出力",
+            JOptionPane.showMessageDialog(this, Ui.message("出力しました。\n" + target), "データ出力",
                     JOptionPane.INFORMATION_MESSAGE);
         });
     }

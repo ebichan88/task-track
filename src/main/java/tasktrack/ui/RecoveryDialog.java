@@ -29,9 +29,9 @@ final class RecoveryDialog extends JDialog {
         String project = names.project(entry.projectId());
 
         JPanel info = Ui.form(
-                "作業名", new JLabel(entry.taskName()),
-                "プロジェクト", new JLabel(project.isEmpty() ? "（なし）" : project),
-                "カテゴリ", new JLabel(names.category(entry.categoryId())),
+                "作業名", Ui.plainLabel(entry.taskName()),
+                "プロジェクト", Ui.plainLabel(project.isEmpty() ? "（なし）" : project),
+                "カテゴリ", Ui.plainLabel(names.category(entry.categoryId())),
                 "開始日時", new JLabel(AppTime.formatDateTime(entry.startAt())));
 
         JRadioButton now = new JRadioButton("現在時刻で終了する", true);

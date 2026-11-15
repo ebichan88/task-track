@@ -29,9 +29,9 @@ final class TimerPanel extends JPanel {
 
     private final JLabel status = new JLabel();
     private final JLabel elapsed = new JLabel();
-    private final JLabel taskName = new JLabel();
-    private final JLabel project = new JLabel();
-    private final JLabel category = new JLabel();
+    private final JLabel taskName = Ui.plainLabel("");
+    private final JLabel project = Ui.plainLabel("");
+    private final JLabel category = Ui.plainLabel("");
     private final JLabel startedAt = new JLabel();
     private final JButton stopButton = new JButton("■ 停止");
     private final JButton startButton = new JButton();
@@ -123,7 +123,6 @@ final class TimerPanel extends JPanel {
             status.setForeground(RUNNING_COLOR);
             elapsed.setForeground(RUNNING_COLOR);
             taskName.setText(current.taskName());
-            taskName.setToolTipText(current.taskName());
             String projectName = names.project(current.projectId());
             project.setText("プロジェクト: " + (projectName.isEmpty() ? "（なし）" : projectName));
             category.setText("カテゴリ: " + names.category(current.categoryId()));

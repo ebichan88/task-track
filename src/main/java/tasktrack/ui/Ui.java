@@ -19,6 +19,7 @@ import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerDateModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
 import tasktrack.app.AppTime;
@@ -37,17 +38,17 @@ final class Ui {
             action.run();
             return true;
         } catch (ValidationException e) {
-            JOptionPane.showMessageDialog(parent, e.getMessage(), "確認してください", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(parent, message(e.getMessage()), "確認してください", JOptionPane.WARNING_MESSAGE);
         } catch (RuntimeException e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(parent, "エラーが発生しました。\n" + e.getMessage(), "エラー",
+            JOptionPane.showMessageDialog(parent, message("エラーが発生しました。\n" + e.getMessage()), "エラー",
                     JOptionPane.ERROR_MESSAGE);
         }
         return false;
     }
 
     static boolean confirm(Component parent, String message, String title) {
-        return JOptionPane.showConfirmDialog(parent, message, title, JOptionPane.OK_CANCEL_OPTION,
+        return JOptionPane.showConfirmDialog(parent, message(message), title, JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.WARNING_MESSAGE) == JOptionPane.OK_OPTION;
     }
 
@@ -85,10 +86,39 @@ final class Ui {
             }
         };
         JTable table = new JTable(model);
+        table.setDefaultRenderer(Object.class, noHtml(new DefaultTableCellRenderer()));
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setRowHeight(table.getRowHeight() + 6);
         table.getTableHeader().setReorderingAllowed(false);
         return table;
+    }
+
+    /**
+     * 利用者が入力した値を表示する部品で、Swing の HTML 解釈を無効にする。
+     * （値が {@code <html>} で始まると HTML として描画され、画像の読み込みなどで外部通信が起こりうるため）
+     */
+    static <T extends JComponent> T noHtml(T component) {
+        component.putClientProperty("html.disable", Boolean.TRUE);
+        return component;
+    }
+
+    /**
+     * ダイアログ用のメッセージ部品。改行ごとに HTML を解釈しないラベルにする。
+     * （JOptionPane に文字列を渡すと行ごとに通常のラベルになり、{@code <html>} で始まる行が HTML として描画されるため）
+     */
+    static JComponent message(String text) {
+        JPanel panel = new JPanel(new java.awt.GridLayout(0, 1));
+        for (String line : String.valueOf(text).split("\\R", -1)) {
+            panel.add(plainLabel(line.isEmpty() ? " " : line));
+        }
+        return panel;
+    }
+
+    /** 利用者が入力した値を表示するためのラベル（HTML として解釈しない）。 */
+    static JLabel plainLabel(String text) {
+        JLabel label = noHtml(new JLabel());
+        label.setText(text);
+        return label;
     }
 
     static DefaultTableModel model(JTable table) {
