@@ -1,0 +1,95 @@
+plugins {
+    // Gradle 本体同梱のコアプラグインのみを使用する（バージョンは Gradle Wrapper で固定）
+    id 'application'
+}
+
+group = 'tasktrack'
+version = '0.1.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.xerial:sqlite-jdbc:3.54.1.0'
+
+    testImplementation platform('org.junit:junit-bom:5.14.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// 推移的依存も含めてバージョンを固定する（gradle.lockfile）
+dependencyLocking {
+    lockAllConfigurations()
+}
+
+application {
+    mainClass = 'tasktrack.Main'
+    applicationName = 'TaskTrack'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xlint:all,-serial,-this-escape', '-Werror']
+}
+
+test {
+    useJUnitPlatform()
+    systemProperty 'java.awt.headless', 'true'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': application.mainClass, 'Implementation-Version': project.version
+    }
+}
+
+// --- jpackage によるアプリケーション化 ---------------------------------------
+// 既定は app-image（追加ツール不要）。インストーラを作る場合は -PjpackageType=msi など
+// （Windows で msi/exe を作るには WiX Toolset が必要）。
+def jpackageInput = layout.buildDirectory.dir('jpackage-input')
+def jpackageOutput = layout.buildDirectory.dir('jpackage')
+
+tasks.register('jpackageInput', Sync) {
+    from jar
+    from configurations.runtimeClasspath
+    into jpackageInput
+}
+
+tasks.register('jpackage', Exec) {
+    group = 'distribution'
+    description = 'jpackage でネイティブアプリケーション（既定: app-image）を作成する'
+    dependsOn 'jpackageInput'
+    def type = providers.gradleProperty('jpackageType').getOrElse('app-image')
+    def launcher = javaToolchains.launcherFor(java.toolchain)
+    def outDir = jpackageOutput.get().asFile
+    def inDir = jpackageInput.get().asFile
+    def jarName = jar.archiveFileName.get()
+    def appVersion = project.version.toString()
+    def mainClassName = application.mainClass.get()
+    doFirst {
+        outDir.deleteDir() // jpackage は出力先が既にあると失敗する
+        def home = launcher.get().metadata.installationPath.asFile
+        def exe = new File(home, 'bin/jpackage' + (System.getProperty('os.name').toLowerCase().contains('win') ? '.exe' : ''))
+        def args = [exe.absolutePath,
+                    '--type', type,
+                    '--name', 'TaskTrack',
+                    '--app-version', appVersion,
+                    '--input', inDir.absolutePath,
+                    '--main-jar', jarName,
+                    '--main-class', mainClassName,
+                    '--dest', outDir.absolutePath,
+                    '--add-modules', 'java.base,java.desktop,java.sql,java.logging',
+                    '--java-options', '-Dfile.encoding=UTF-8']
+        if (type in ['msi', 'exe']) {
+            args += ['--win-menu', '--win-shortcut', '--win-per-user-install']
+        }
+        commandLine args
+    }
+}
