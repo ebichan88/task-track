@@ -14,10 +14,11 @@ import javax.swing.JTextField;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import tasktrack.AppContext;
+import tasktrack.db.AppStateRepository;
 
 /** バックアップ画面（データベースのバックアップ・復元）。 */
 final class BackupPanel extends JPanel {
-    private static final String LAST_DIR_KEY = "last_backup_dir";
+    private static final String LAST_DIR_KEY = AppStateRepository.LOCAL_PREFIX + "last_backup_dir";
 
     private final AppContext ctx;
     private final Runnable afterRestore;

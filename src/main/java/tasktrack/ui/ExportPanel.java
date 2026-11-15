@@ -21,13 +21,14 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 
 import tasktrack.AppContext;
+import tasktrack.db.AppStateRepository;
 import tasktrack.app.AppTime;
 import tasktrack.app.ExportService;
 import tasktrack.app.ValidationException;
 
 /** データ出力画面（指定期間の CSV を ZIP にまとめて出力）。 */
 final class ExportPanel extends JPanel {
-    private static final String LAST_DIR_KEY = "last_export_dir";
+    private static final String LAST_DIR_KEY = AppStateRepository.LOCAL_PREFIX + "last_export_dir";
     private static final String[][] FILES = {
             {"time_entries.csv", "作業記録（期間内の時間部分のみ）"},
             {"daily_reviews.csv", "日次振り返り"},

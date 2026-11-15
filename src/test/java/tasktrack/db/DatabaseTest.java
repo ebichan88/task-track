@@ -99,6 +99,79 @@ class DatabaseTest {
     }
 
     @Test
+    void backupAndRestoreRejectDatabaseItselfReachedThroughOtherPaths() throws IOException {
+        Path db = dir.resolve("t.db");
+        Files.createDirectories(dir.resolve("sub"));
+        Path dotted = dir.resolve("sub").resolve("..").resolve("t.db");
+        Path link = dir.resolve("link.db");
+        Path hardLink = dir.resolve("hard.db");
+        try (AppContext ctx = new AppContext(db, Clock.systemUTC())) {
+            Files.createSymbolicLink(link, db);
+            Files.createLink(hardLink, db);
+            ctx.masters.createProject("現在のデータ", "");
+            for (Path alias : new Path[] {dotted, link, hardLink}) {
+                assertThrows(ValidationException.class, () -> ctx.backup.backup(alias), alias.toString());
+                assertThrows(ValidationException.class, () -> ctx.backup.restore(alias), alias.toString());
+            }
+            // リンク先のフォルダ経由で、まだ存在しないファイル名として指定しても同じ
+            Path dirLink = dir.resolve("dirlink");
+            Files.createSymbolicLink(dirLink, dir);
+            Files.delete(link);
+            Files.delete(hardLink);
+            assertThrows(ValidationException.class, () -> ctx.backup.backup(dirLink.resolve("t.db")));
+            assertEquals(1, ctx.masters.projects().size());
+            ctx.masters.createProject("まだ書き込める", "");
+        }
+        try (AppContext ctx = new AppContext(db, Clock.systemUTC())) {
+            assertEquals(2, ctx.masters.projects().size());
+        }
+    }
+
+    @Test
+    void machineLocalSettingsAreNotBackedUpNorRestored() throws IOException {
+        String localKey = AppStateRepository.LOCAL_PREFIX + "last_backup_dir";
+        Path backup = dir.resolve("backup.db");
+        Path malicious = dir.resolve("malicious.db");
+
+        // 細工されたバックアップ: ネットワークパスをフォルダ設定に仕込んである
+        try (AppContext other = new AppContext(dir.resolve("other.db"), Clock.systemUTC())) {
+            other.masters.createProject("他所のデータ", "");
+            other.db.backupTo(malicious);
+        }
+        try (java.sql.Connection c = java.sql.DriverManager.getConnection("jdbc:sqlite:" + malicious);
+             java.sql.Statement st = c.createStatement()) {
+            st.execute("INSERT INTO app_state (key, value) VALUES ('" + localKey + "', '\\\\evil.invalid\\share')");
+        } catch (java.sql.SQLException e) {
+            throw new IllegalStateException(e);
+        }
+
+        try (AppContext ctx = new AppContext(dir.resolve("t.db"), Clock.systemUTC())) {
+            ctx.appState.put(localKey, "C:\\Users\\me\\secret-client-folder");
+
+            // バックアップには含まれない（削除済み領域にも残らない）
+            ctx.backup.backup(backup);
+            assertEquals("C:\\Users\\me\\secret-client-folder", ctx.appState.get(localKey).orElseThrow());
+            String raw = new String(Files.readAllBytes(backup), java.nio.charset.StandardCharsets.ISO_8859_1);
+            assertTrue(!raw.contains("secret-client-folder"));
+            try (AppContext copy = new AppContext(backup, Clock.systemUTC())) {
+                assertTrue(copy.appState.get(localKey).isEmpty());
+                assertEquals("1", copy.appState.get("schema_version").orElseThrow());
+            }
+
+            // 復元してもバックアップ側の値は取り込まれず、この PC の値が残る
+            ctx.backup.restore(malicious);
+            assertEquals("他所のデータ", ctx.masters.projects().get(0).name());
+            assertEquals("C:\\Users\\me\\secret-client-folder", ctx.appState.get(localKey).orElseThrow());
+        }
+
+        // この PC に設定が無い場合は、復元後も設定なしのまま
+        try (AppContext fresh = new AppContext(dir.resolve("fresh.db"), Clock.systemUTC())) {
+            fresh.backup.restore(malicious);
+            assertTrue(fresh.appState.get(localKey).isEmpty());
+        }
+    }
+
+    @Test
     void restoreRejectsInvalidFilesAndKeepsCurrentData() throws IOException {
         Path garbage = dir.resolve("garbage.db");
         Files.writeString(garbage, "this is not a sqlite database, just some text ".repeat(50));

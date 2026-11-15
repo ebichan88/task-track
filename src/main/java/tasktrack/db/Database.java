@@ -27,6 +27,9 @@ public final class Database implements AutoCloseable {
         T map(ResultSet rs) throws SQLException;
     }
 
+    private static final String IS_LOCAL_KEY =
+            "substr(key, 1, " + AppStateRepository.LOCAL_PREFIX.length() + ") = '" + AppStateRepository.LOCAL_PREFIX + "'";
+
     private final Path file;
     private Connection conn;
     private int txDepth;
@@ -37,7 +40,7 @@ public final class Database implements AutoCloseable {
 
     /** DB ファイルを開き（無ければ作成し）、スキーマを最新化する。 */
     public static Database open(Path file) {
-        Database db = new Database(file.toAbsolutePath());
+        Database db = new Database(file.toAbsolutePath().normalize());
         try {
             Path dir = db.file.getParent();
             if (dir != null) {
@@ -142,8 +145,8 @@ public final class Database implements AutoCloseable {
      * 既存ファイルは置き換える。
      */
     public synchronized void backupTo(Path target) {
-        Path abs = target.toAbsolutePath();
-        if (abs.equals(file)) {
+        Path abs = target.toAbsolutePath().normalize();
+        if (isDatabaseFile(abs)) {
             throw new DataAccessException("使用中のデータベース自身をバックアップ先にはできません");
         }
         Path tmp = abs.resolveSibling(abs.getFileName() + ".tmp");
@@ -153,6 +156,7 @@ public final class Database implements AutoCloseable {
                 ps.setString(1, tmp.toString());
                 ps.execute();
             }
+            removeLocalState(tmp);
             Files.move(tmp, abs, StandardCopyOption.REPLACE_EXISTING);
         } catch (SQLException | IOException e) {
             try {
@@ -175,11 +179,14 @@ public final class Database implements AutoCloseable {
      * 置き換え後に開けなかった場合は退避した DB へ戻す。
      */
     public synchronized void restoreFrom(Path backup) {
-        Path src = backup.toAbsolutePath();
-        if (src.equals(file)) {
+        Path src = backup.toAbsolutePath().normalize();
+        if (isDatabaseFile(src)) {
             throw new DataAccessException("使用中のデータベース自身からは復元できません");
         }
         verifyBackup(src);
+        // この PC 固有の設定は復元後も現在の値を維持する
+        List<String[]> localState = query("SELECT key, value FROM app_state WHERE " + IS_LOCAL_KEY,
+                rs -> new String[] {rs.getString(1), rs.getString(2)});
         Path saved = preRestoreFile();
         backupTo(saved);
         closeConnection();
@@ -187,6 +194,7 @@ public final class Database implements AutoCloseable {
             replaceDbFile(src);
             connect();
             Schema.migrate(this);
+            replaceLocalState(localState);
         } catch (RuntimeException e) {
             closeConnection();
             try {
@@ -194,7 +202,61 @@ public final class Database implements AutoCloseable {
             } finally {
                 connect();
             }
+            replaceLocalState(localState);
             throw new DataAccessException("復元に失敗したため、元のデータに戻しました", e);
+        }
+    }
+
+    /** DB 内の PC 固有設定を {@code localState} の内容に入れ替える（バックアップ側に入っていた値は捨てる）。 */
+    private void replaceLocalState(List<String[]> localState) {
+        transaction(() -> {
+            update("DELETE FROM app_state WHERE " + IS_LOCAL_KEY);
+            for (String[] kv : localState) {
+                update("INSERT INTO app_state (key, value) VALUES (?, ?)", kv[0], kv[1]);
+            }
+            return null;
+        });
+    }
+
+    /** 書き出したバックアップから PC 固有設定を取り除く。VACUUM で空きページに残る値も消す。 */
+    private static void removeLocalState(Path backupFile) throws SQLException {
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + backupFile);
+             Statement st = c.createStatement()) {
+            st.executeUpdate("DELETE FROM app_state WHERE " + IS_LOCAL_KEY);
+            st.execute("VACUUM");
+        }
+    }
+
+    /**
+     * {@code path} が使用中の DB ファイルそのものを指すか。
+     * 文字列ではなく実体で比較する（{@code ..} を含むパス、シンボリックリンク、ハードリンク経由も検出する）。
+     */
+    private boolean isDatabaseFile(Path path) {
+        try {
+            if (Files.exists(path) && Files.isSameFile(path, file)) {
+                return true;
+            }
+        } catch (IOException e) {
+            // 判定できない場合は下の正規化パスの比較に任せる
+        }
+        return canonical(path).equals(canonical(file));
+    }
+
+    /** シンボリックリンクなどを解決したパス。ファイルが未作成の場合は親フォルダまでを解決する。 */
+    private static Path canonical(Path path) {
+        Path abs = path.toAbsolutePath().normalize();
+        try {
+            return abs.toRealPath();
+        } catch (IOException e) {
+            Path parent = abs.getParent();
+            if (parent == null) {
+                return abs;
+            }
+            try {
+                return parent.toRealPath().resolve(abs.getFileName());
+            } catch (IOException e2) {
+                return abs;
+            }
         }
     }
 
